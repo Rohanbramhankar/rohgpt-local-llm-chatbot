@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#071326">
+  <meta name="description" content="Meet RohGPT: a private AI assistant that runs on your computer, powered by local Ollama models.">
+  <title>RohGPT — Your AI, on your device</title>
+  <link rel="icon" href="/images/roh-gpt.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="nav-wrap">
+    <nav class="nav" aria-label="Main navigation">
+      <a class="brand" href="#" aria-label="RohGPT home">
+        <span class="brand-mark" aria-hidden="true">R</span>
+        <span>RohGPT</span>
+      </a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#privacy">Privacy</a>
+        <a class="nav-download" href="#downloads">Download</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-content">
+        <p class="eyebrow"><span class="status-dot"></span> YOUR PRIVATE, LOCAL AI</p>
+        <h1>Meet your ideas<br>where they <span>live.</span></h1>
+        <p class="hero-copy">A capable AI chat, right on your computer. Ask questions, explore documents, and create—while your conversations stay with you.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#downloads">Get RohGPT <span aria-hidden="true">↓</span></a>
+          <a class="button button-quiet" href="#how-it-works">How it works <span aria-hidden="true">↘</span></a>
+        </div>
+        <p class="hero-note">Free to use · Runs locally with Ollama · No account required</p>
+      </div>
+      <div class="orbital" aria-hidden="true">
+        <div class="orbital-ring ring-one"></div>
+        <div class="orbital-ring ring-two"></div>
+        <div class="orbital-core"><span>R</span><i></i></div>
+        <div class="orbit-chip chip-one">Your device</div>
+        <div class="orbit-chip chip-two">Your data</div>
+      </div>
+    </section>
+
+    <section class="trust-row" id="privacy">
+      <div><span class="trust-icon">⌂</span><span><strong>Runs on your computer</strong><small>Powered by a local AI model</small></span></div>
+      <div><span class="trust-icon">◈</span><span><strong>Your conversations stay yours</strong><small>Chat data is saved on your device</small></span></div>
+      <div><span class="trust-icon">◎</span><span><strong>Works offline</strong><small>After setup and model download</small></span></div>
+    </section>
+
+    <section class="section" id="features">
+      <div class="section-heading">
+        <p class="eyebrow">A LITTLE MORE PERSONAL</p>
+        <h2>Everything you need.<br><span>Nothing leaving your device.</span></h2>
+      </div>
+      <div class="feature-grid">
+        <article class="feature-card">
+          <span class="feature-icon">✳</span>
+          <h3>Chat naturally</h3>
+          <p>Ask in the language you are comfortable with; RohGPT answers in English by default.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-icon">▤</span>
+          <h3>Bring your files</h3>
+          <p>Ask questions about PDFs and, with a compatible model, images—processed on your computer.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-icon">⌘</span>
+          <h3>Make it yours</h3>
+          <p>Keep conversations, organize chats, and save preferences without needing an account.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="how-section" id="how-it-works">
+      <div class="section-heading">
+        <p class="eyebrow">GET STARTED IN THREE STEPS</p>
+        <h2>Your computer. Your AI.</h2>
+      </div>
+      <div class="steps">
+        <article><span class="step-number">01</span><div><h3>Install RohGPT</h3><p>Download the build for your computer and open the app.</p></div></article>
+        <article><span class="step-number">02</span><div><h3>Install Ollama</h3><p>RohGPT uses Ollama to run the AI model locally. Download it from <a href="https://ollama.com/download" target="_blank" rel="noreferrer">ollama.com</a>.</p></div></article>
+        <article><span class="step-number">03</span><div><h3>Download a model</h3><p>Open a terminal and run <code>ollama pull llama3.2:3b</code>. Keep Ollama running to chat.</p></div></article>
+      </div>
+    </section>
+
+    <section class="download-section" id="downloads">
+      <div class="download-heading">
+        <div>
+          <p class="eyebrow">YOUR DEVICE, YOUR ROHGPT</p>
+          <h2>Choose your download.</h2>
+          <p>Each build runs RohGPT on your computer. Ollama and an AI model are installed separately.</p>
+        </div>
+        <span class="release-pill" id="releaseVersion">Checking latest release…</span>
+      </div>
+      <div class="download-grid">
+        <article class="download-card">
+          <span class="platform-icon" aria-hidden="true">▦</span>
+          <div><h3>Windows</h3><p>64-bit PCs · Setup installer</p></div>
+          <a class="download-link disabled" data-asset="RohGPT-Setup-Windows-x64.exe" aria-disabled="true">Preparing download…</a>
+        </article>
+        <article class="download-card">
+          <span class="platform-icon apple" aria-hidden="true">●</span>
+          <div><h3>macOS</h3><p>Choose Apple silicon or Intel Mac</p></div>
+          <a class="download-link disabled" data-asset="RohGPT-macOS-Apple-Silicon.dmg" aria-disabled="true">Apple silicon download</a>
+          <a class="download-link secondary disabled" data-asset="RohGPT-macOS-Intel.dmg" aria-disabled="true">Intel Mac download</a>
+        </article>
+        <article class="download-card">
+          <span class="platform-icon" aria-hidden="true">◉</span>
+          <div><h3>Linux</h3><p>64-bit · Debian/Ubuntu or portable archive</p></div>
+          <a class="download-link disabled" data-asset="RohGPT-Linux-x64.deb" aria-disabled="true">Debian / Ubuntu download</a>
+          <a class="download-link secondary disabled" data-asset="RohGPT-Linux-x64.tar.gz" aria-disabled="true">Other Linux distributions</a>
+        </article>
+      </div>
+      <p class="download-footnote" id="downloadStatus" role="status">Downloads appear here when a release is published.</p>
+      <p class="mac-note">Initial Windows and macOS builds are unsigned and may trigger SmartScreen or Gatekeeper warnings. Linux needs WebKitGTK; the .deb package is for Debian/Ubuntu.</p>
+    </section>
+
+    <section class="closing">
+      <p class="eyebrow">A MORE PERSONAL KIND OF AI</p>
+      <h2>AI that feels like <span>yours.</span></h2>
+      <a class="button button-primary" href="#downloads">Find your download <span aria-hidden="true">↑</span></a>
+    </section>
+  </main>
+
+  <footer>
+    <a class="brand" href="#"><span class="brand-mark" aria-hidden="true">R</span><span>RohGPT</span></a>
+    <p>Local AI, made personal.</p>
+    <a href="https://github.com/Rohanbramhankar/rohgpt-local-llm-chatbot" target="_blank" rel="noreferrer">View on GitHub <span aria-hidden="true">↗</span></a>
+  </footer>
+</body>
+</html>

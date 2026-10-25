@@ -1,6 +1,7 @@
 import base64
 import json
 import logging
+import os
 import re
 from io import BytesIO
 from pathlib import Path
@@ -32,7 +33,8 @@ logger = logging.getLogger(__name__)
 # CONFIGURATION
 # =========================================================
 
-OLLAMA_URL = "http://127.0.0.1:11434/api/chat"
+OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
+OLLAMA_URL = f"{OLLAMA_BASE_URL}/api/chat"
 OLLAMA_MODEL = "llama3.2:3b"
 
 MAX_PDF_SIZE = 10 * 1024 * 1024  # 10 MB
@@ -41,7 +43,6 @@ MAX_PDF_TEXT_LENGTH = 100_000
 MAX_IMAGE_SIZE = 5 * 1024 * 1024
 MAX_CHAT_IMAGES = 3
 MAX_IMAGE_DIMENSION = 4096
-OLLAMA_BASE_URL = OLLAMA_URL.rsplit("/api/chat", 1)[0]
 DEFAULT_SYSTEM_PROMPT = """
 You are RohGPT, a helpful AI assistant.
 

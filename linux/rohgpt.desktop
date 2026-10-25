@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=RohGPT
+Comment=Private local AI assistant
+Exec=rohgpt
+Icon=rohgpt
+Terminal=false
+Type=Application
+Categories=Office;Utility;

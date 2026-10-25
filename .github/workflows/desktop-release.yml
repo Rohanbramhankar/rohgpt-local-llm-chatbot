@@ -1,0 +1,101 @@
+name: Build desktop releases
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.asset }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            asset: RohGPT-Setup-Windows-x64.exe
+            artifact_path: dist/RohGPT-Setup-Windows-x64.exe
+            command: windows
+          - os: ubuntu-24.04
+            asset: RohGPT-Linux-x64.tar.gz
+            artifact_path: RohGPT-Linux-x64.*
+            command: linux
+          - os: macos-15-intel
+            asset: RohGPT-macOS-Intel.dmg
+            artifact_path: RohGPT-macOS-Intel.dmg
+            command: mac-intel
+          - os: macos-latest
+            asset: RohGPT-macOS-Apple-Silicon.dmg
+            artifact_path: RohGPT-macOS-Apple-Silicon.dmg
+            command: mac-arm
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Linux WebView dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+      - name: Install desktop dependencies
+        run: python -m pip install -r requirements-desktop.txt
+      - name: Prepare static assets
+        run: python manage.py collectstatic --noinput
+      - name: Build desktop app
+        run: pyinstaller --noconfirm --clean desktop.spec
+      - name: Package Windows build
+        if: matrix.command == 'windows'
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          $version = $env:GITHUB_REF_NAME.TrimStart('v')
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" windows-installer.iss
+      - name: Package Linux build
+        if: matrix.command == 'linux'
+        run: |
+          set -eu
+          version="${GITHUB_REF_NAME#v}"
+          mkdir -p package/DEBIAN package/usr/bin package/usr/share/applications package/usr/share/icons/hicolor/scalable/apps
+          install -m 0755 dist/RohGPT package/usr/bin/rohgpt
+          install -m 0644 linux/rohgpt.desktop package/usr/share/applications/rohgpt.desktop
+          install -m 0644 static/images/roh-gpt.svg package/usr/share/icons/hicolor/scalable/apps/rohgpt.svg
+          cat > package/DEBIAN/control <<EOF
+          Package: rohgpt
+          Version: ${version}
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Depends: libgtk-3-0 | libgtk-3-0t64, libwebkit2gtk-4.1-0
+          Maintainer: Rohan Bramhankar
+          Description: Private local AI assistant
+           RohGPT runs a local chat interface powered by Ollama.
+          EOF
+          dpkg-deb --build package RohGPT-Linux-x64.deb
+          cp README.md dist/README.txt
+          tar -czf "${{ matrix.asset }}" -C dist RohGPT README.txt
+      - name: Package macOS installer image
+        if: startsWith(matrix.command, 'mac-')
+        run: hdiutil create -volname RohGPT -srcfolder dist/RohGPT.app -ov -format UDZO "${{ matrix.asset }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: ${{ matrix.artifact_path }}
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          generate_release_notes: true
