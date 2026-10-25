@@ -1,3 +1,7 @@
 Django>=5.2,<6.0
 requests>=2.32,<3
 pypdf>=5.0.0
+bleach>=6.2,<7.0
+Markdown>=3.7,<4.0
+Pillow>=11.0,<13.0
+Pygments>=2.18,<3.0

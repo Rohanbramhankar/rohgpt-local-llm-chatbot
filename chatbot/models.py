@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 
 class Conversation(models.Model):
@@ -7,7 +8,17 @@ class Conversation(models.Model):
     # unique=True kadhla: ek session madhe anek chats asu shaktat.
     session_key = models.CharField(
         max_length=100,
+        blank=True,
+        default="",
         db_index=True,
+    )
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="chat_conversations",
     )
 
     title = models.CharField(
@@ -25,6 +36,18 @@ class Conversation(models.Model):
     pdf_text = models.TextField(
         blank=True,
         default="",
+    )
+
+    model_name = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+    )
+
+    memory = models.TextField(
+        blank=True,
+        default="",
+        max_length=2000,
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -65,3 +88,14 @@ class Message(models.Model):
 
     def __str__(self):
         return f"{self.role}: {self.content[:50]}"
+
+
+class ChatImage(models.Model):
+    message = models.ForeignKey(
+        Message,
+        on_delete=models.CASCADE,
+        related_name="images",
+    )
+    image = models.ImageField(upload_to="chat_images/%Y/%m")
+    content_type = models.CharField(max_length=30)
+    created_at = models.DateTimeField(auto_now_add=True)

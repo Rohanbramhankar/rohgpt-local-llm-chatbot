@@ -1,0 +1,34 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#071326">
+    <title>Sign in · RohGPT</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body class="auth-page">
+    <main class="auth-card">
+        <a class="brand" href="{% url 'chat_home' %}">
+            <span class="brand-mark">R</span><span>RohGPT</span>
+        </a>
+        <h1>Sign in</h1>
+        <p>Access your locally stored conversations. Guest chats in this browser will move to the account you sign in with.</p>
+        {% if form.non_field_errors %}
+        <div class="auth-errors">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <form method="post">
+            {% csrf_token %}
+            <label for="{{ form.username.id_for_label }}">Username</label>
+            {{ form.username }}
+            {{ form.username.errors }}
+            <label for="{{ form.password.id_for_label }}">Password</label>
+            {{ form.password }}
+            {{ form.password.errors }}
+            <button class="dialog-save" type="submit">Sign in</button>
+        </form>
+        <p class="auth-links">New to RohGPT? <a href="{% url 'register' %}">Create an account</a></p>
+    </main>
+</body>
+</html>

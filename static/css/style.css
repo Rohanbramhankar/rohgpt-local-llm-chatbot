@@ -393,7 +393,46 @@ a:focus-visible {
 }
 
 .topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 3px;
     margin-left: auto;
+}
+
+.model-select {
+    max-width: 200px;
+    padding: 5px 25px 5px 8px;
+    border: 1px solid #a7c9f22b;
+    border-radius: 7px;
+    background: #10213a;
+    color: #dbeaff;
+    font-size: 11px;
+}
+
+.ollama-status {
+    position: absolute;
+    top: 63px;
+    right: 20px;
+    z-index: 2;
+    color: #93aaca;
+    font-size: 10px;
+    pointer-events: none;
+}
+
+.ollama-status.error,
+.stream-status.error {
+    color: #ff9b9b;
+}
+
+.account-link {
+    color: #b9d8ff;
+    font-size: 11px;
+    text-decoration: none;
+}
+
+.account-link:hover,
+.auth-links a {
+    color: #8cc5ff;
 }
 
 .clear-button {
@@ -523,6 +562,64 @@ a:focus-visible {
     white-space: pre-wrap;
 }
 
+.markdown-content p {
+    margin: 0 0 12px;
+}
+
+.markdown-content p:last-child,
+.markdown-content ul:last-child,
+.markdown-content ol:last-child,
+.markdown-content blockquote:last-child {
+    margin-bottom: 0;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4 {
+    margin: 20px 0 8px;
+    color: #f1f6ff;
+    line-height: 1.35;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+    padding-left: 24px;
+}
+
+.markdown-content li {
+    margin: 4px 0;
+}
+
+.markdown-content blockquote {
+    margin: 10px 0;
+    padding: 2px 14px;
+    border-left: 3px solid #5aa9ff;
+    color: #c0d2e9;
+}
+
+.markdown-content a {
+    color: #8dc7ff;
+}
+
+.markdown-content table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+}
+
+.markdown-content th,
+.markdown-content td {
+    padding: 7px 10px;
+    border: 1px solid #8abfff36;
+}
+
+.markdown-content th {
+    background: #183253;
+    text-align: left;
+}
+
 .message.user .bubble {
     padding: 10px 16px;
     border: 1px solid #69aaff2b;
@@ -602,6 +699,66 @@ a:focus-visible {
     color: #e8e8e8;
     font: 13px/1.6 Consolas, "Cascadia Code", monospace;
     tab-size: 4;
+}
+
+.codehilite {
+    overflow: hidden;
+    margin: 12px 0;
+    border: 1px solid #8abfff2b;
+    border-radius: 11px;
+    background: #07101e;
+}
+
+.codehilite pre {
+    overflow-x: auto;
+    margin: 0;
+    padding: 14px;
+    color: #e8e8e8;
+    font: 13px/1.6 Consolas, "Cascadia Code", monospace;
+    tab-size: 4;
+}
+
+.codehilite .k,
+.codehilite .kn,
+.codehilite .kd {
+    color: #7dbaff;
+}
+
+.codehilite .s,
+.codehilite .s1,
+.codehilite .s2 {
+    color: #a5d6a7;
+}
+
+.codehilite .c,
+.codehilite .c1 {
+    color: #8498b3;
+    font-style: italic;
+}
+
+.codehilite .m,
+.codehilite .mi {
+    color: #d9a8ff;
+}
+
+.codehilite .nf,
+.codehilite .nc {
+    color: #ffcf83;
+}
+
+.image-attachments {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 9px;
+}
+
+.image-attachments img {
+    max-width: min(100%, 280px);
+    max-height: 240px;
+    border: 1px solid #8abfff36;
+    border-radius: 10px;
+    object-fit: contain;
 }
 
 .welcome {
@@ -749,6 +906,56 @@ a:focus-visible {
     transition: border-color .15s ease, box-shadow .15s ease;
 }
 
+.composer-tool-button {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #a9c7e8;
+    font-size: 17px;
+}
+
+.composer-tool-button:hover,
+.composer-tool-button.active {
+    background: #ffffff12;
+    color: #8cc5ff;
+}
+
+.composer-tool-button:disabled {
+    cursor: not-allowed;
+    opacity: .4;
+}
+
+.attachment-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 5px 8px;
+}
+
+.attachment-chip {
+    max-width: 220px;
+    overflow: hidden;
+    padding: 4px 9px;
+    border: 1px solid #8abfff36;
+    border-radius: 999px;
+    color: #b9d8ff;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.stream-status {
+    min-height: 16px;
+    padding: 3px 8px 0;
+    color: #9db9da;
+    font-size: 11px;
+}
+
 .composer:focus-within {
     border-color: #70b5ff88;
     box-shadow: 0 10px 35px #02091670, 0 0 0 3px #3b82f61a;
@@ -826,9 +1033,149 @@ a:focus-visible {
     display: none;
 }
 
+.memory-dialog {
+    width: min(500px, calc(100vw - 30px));
+    padding: 22px;
+    border: 1px solid #8abfff40;
+    border-radius: 16px;
+    background: #0c1a2e;
+    color: var(--text);
+    box-shadow: 0 24px 80px #000a;
+}
+
+.memory-dialog::backdrop {
+    background: #020916bb;
+    backdrop-filter: blur(4px);
+}
+
+.memory-dialog h2 {
+    margin: 0 0 8px;
+    font-size: 18px;
+}
+
+.memory-dialog p {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.memory-dialog textarea {
+    width: 100%;
+    min-height: 120px;
+    resize: vertical;
+    padding: 10px;
+    border: 1px solid #8abfff36;
+    border-radius: 9px;
+    background: #071326;
+    color: var(--text);
+}
+
+.memory-dialog input[type="text"] {
+    width: 100%;
+    min-height: 42px;
+    padding: 9px 11px;
+    border: 1px solid #8abfff36;
+    border-radius: 9px;
+    background: #071326;
+    color: var(--text);
+}
+
+.dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 9px;
+    margin-top: 13px;
+}
+
+.dialog-cancel,
+.dialog-save {
+    padding: 9px 13px;
+    border: 1px solid #8abfff36;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+}
+
+.dialog-save {
+    border-color: #75b8ff;
+    background: #75b8ff;
+    color: #071326;
+    font-weight: 650;
+}
+
+.auth-page {
+    display: grid;
+    min-height: 100dvh;
+    place-items: center;
+    overflow: auto;
+    background:
+        radial-gradient(ellipse at 72% 78%, #1262b54d 0, transparent 56%),
+        linear-gradient(145deg, #08172c, #071326 55%, #0a1931);
+}
+
+.auth-card {
+    width: min(420px, calc(100vw - 28px));
+    padding: 27px;
+    border: 1px solid #a7c9f229;
+    border-radius: 18px;
+    background: #0c1a2eec;
+    box-shadow: 0 22px 60px #02091670;
+}
+
+.auth-card .brand {
+    padding: 0 0 18px;
+}
+
+.auth-card h1 {
+    margin: 0 0 5px;
+}
+
+.auth-card > p,
+.auth-card small {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.auth-card form {
+    display: grid;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+.auth-card label {
+    margin-top: 7px;
+    color: #dceaff;
+    font-size: 12px;
+}
+
+.auth-card input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #8abfff36;
+    border-radius: 8px;
+    background: #071326;
+}
+
+.auth-card ul.errorlist,
+.auth-errors,
+.field-error {
+    margin: 0;
+    color: #ff9b9b;
+    font-size: 12px;
+}
+
+.auth-links {
+    margin-top: 20px;
+}
+
 @media (max-width: 760px) {
     .app {
         display: block;
+        height: 100dvh;
+    }
+
+    .main {
+        height: 100%;
+        min-height: 0;
     }
 
     .sidebar {
@@ -860,6 +1207,25 @@ a:focus-visible {
         padding: 7px 12px;
     }
 
+    .topbar-actions {
+        gap: 0;
+    }
+
+    .topbar-actions .icon-button {
+        width: 30px;
+        height: 30px;
+    }
+
+    .model-select {
+        max-width: 105px;
+    }
+
+    .ollama-status {
+        top: 55px;
+        right: 14px;
+        font-size: 9px;
+    }
+
     .thread-inner {
         width: min(100% - 28px, 790px);
         padding-top: 20px;
@@ -868,6 +1234,11 @@ a:focus-visible {
     .composer-area {
         width: calc(100% - 24px);
         padding-bottom: max(9px, env(safe-area-inset-bottom));
+    }
+
+    .composer-tool-button {
+        width: 29px;
+        height: 29px;
     }
 
     .suggestions {

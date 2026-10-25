@@ -1,13 +1,16 @@
 {% load static %}
+{% load chat_formatting %}
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#212121">
+    <meta name="theme-color" content="#071326">
+    <link rel="manifest" href="{% static 'manifest.webmanifest' %}">
+    <link rel="icon" href="{% static 'images/roh-gpt.svg' %}" type="image/svg+xml">
     <title>{{ conversation.title }} · RohGPT</title>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=2">
 </head>
 
 <body>
@@ -61,22 +64,49 @@
                 <div class="profile-avatar" aria-hidden="true">R</div>
                 <div class="profile-copy">
                     <strong>RohGPT</strong>
-                    <span>Private AI assistant</span>
+                    {% if request.user.is_authenticated %}
+                    <span>{{ request.user.username }}</span>
+                    {% else %}
+                    <span>Guest session</span>
+                    {% endif %}
                 </div>
-                <span class="local-indicator" title="Local Ollama model"></span>
+                {% if request.user.is_authenticated %}
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button class="icon-button" type="submit" aria-label="Log out" title="Log out">↪</button>
+                </form>
+                {% else %}
+                <a class="account-link" href="{% url 'login' %}">Sign in</a>
+                {% endif %}
             </div>
         </aside>
 
         <main class="main">
-            <header class="topbar">
+            <header class="topbar" data-update-url="{% url 'update_conversation' %}"
+                data-models-url="{% url 'ollama_models' %}">
                 <button type="button" class="icon-button menu-toggle" id="menuToggle"
                     aria-label="Open chat history" aria-expanded="false">☰</button>
                 <div class="model-label">
-                    <span class="model-name">RohGPT</span>
+                    <label class="model-name" for="modelSelect">RohGPT</label>
                     <span class="model-badge">LOCAL</span>
-                    <span class="model-subtitle">Ollama · Llama 3.2</span>
+                    <select class="model-select" id="modelSelect" aria-label="Choose local model">
+                        {% for model in available_models %}
+                        <option value="{{ model }}" {% if model == current_model %}selected{% endif %}>{{ model }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="topbar-actions">
+                    <button type="button" class="icon-button" id="renameChat" title="Rename chat"
+                        aria-label="Rename chat">✎</button>
+                    <button type="button" class="icon-button" id="memoryButton" title="Conversation memory"
+                        aria-label="Conversation memory">◉</button>
+                    <a class="icon-button" href="{{ chat_export_url }}" title="Export chat as Markdown"
+                        aria-label="Export chat">⇩</a>
+                    <form method="post" action="{{ continue_chat_url }}">
+                        {% csrf_token %}
+                        <button type="submit" class="icon-button" title="Continue in a new chat"
+                            aria-label="Continue in new chat">↗</button>
+                    </form>
                     <form method="post" action="{% url 'chat_home' %}"
                         onsubmit="return confirm('Clear all messages in this chat?');">
                         {% csrf_token %}
@@ -86,6 +116,12 @@
                     </form>
                 </div>
             </header>
+
+            {% if ollama_error %}
+            <div class="ollama-status error" id="ollamaStatus" role="status">{{ ollama_error }}</div>
+            {% else %}
+            <div class="ollama-status" id="ollamaStatus" role="status">Ollama connected · {{ available_models|length }} local model(s)</div>
+            {% endif %}
 
             {% if messages %}
             <div class="alerts" role="status" aria-live="polite">
@@ -118,11 +154,21 @@
                             {% if msg.role == "assistant" %}
                             <div class="message-author">RohGPT</div>
                             {% endif %}
-                            <div class="bubble" data-render-code>{{ msg.content }}</div>
+                            <div class="bubble markdown-content">{{ msg.content|render_markdown }}</div>
+                            {% if msg.images.all %}
+                            <div class="image-attachments">
+                                {% for image in msg.images.all %}
+                                <img src="{% url 'chat_image' image.id %}" alt="Image attached to your message"
+                                    loading="lazy">
+                                {% endfor %}
+                            </div>
+                            {% endif %}
                             {% if msg.role == "assistant" %}
                             <div class="message-actions">
                                 <button type="button" class="message-action copy-button"
                                     aria-label="Copy response" title="Copy">▢ <span>Copy</span></button>
+                                <button type="button" class="message-action speak-button"
+                                    aria-label="Read response aloud" title="Read aloud">◖ <span>Read aloud</span></button>
                                 {% if forloop.last %}
                                 <form method="post" action="{% url 'chat_home' %}" class="regenerate-form">
                                     {% csrf_token %}
@@ -176,20 +222,59 @@
                             aria-label="Choose a PDF file" hidden>
                     </form>
                     {% endif %}
-                    <span class="composer-context">Your chats and files stay on this device</span>
+                    <span class="composer-context">Chats stay local · voice input may use your browser’s speech service</span>
                 </div>
-                <form method="post" action="{% url 'chat_home' %}" id="chatForm" class="composer">
+                <form method="post" action="{% url 'chat_home' %}" data-stream-url="{% url 'stream_chat' %}"
+                    id="chatForm" class="composer" enctype="multipart/form-data">
                     {% csrf_token %}
-                    <textarea name="message" id="message" rows="1" required
+                    <input type="file" name="images" id="imageFiles" accept="image/png,image/jpeg,image/webp"
+                        multiple hidden>
+                    <button type="button" class="composer-tool-button" id="attachImage" title="Attach image"
+                        aria-label="Attach image">▧</button>
+                    <textarea name="message" id="message" rows="1"
                         placeholder="Ask anything" aria-label="Write your message" autofocus></textarea>
+                    <button type="button" class="composer-tool-button voice-button" id="voiceInput"
+                        title="Voice input (browser support required)" aria-label="Start voice input">🎙</button>
+                    <button type="button" class="composer-tool-button voice-button" id="speakLatest"
+                        title="Read latest response aloud" aria-label="Read latest response aloud">◖</button>
                     <button type="submit" class="send-button" id="sendBtn" aria-label="Send message" title="Send">
                         <span aria-hidden="true">↑</span>
                     </button>
                 </form>
+                <div class="attachment-preview" id="attachmentPreview" aria-live="polite"></div>
+                <div class="stream-status" id="streamStatus" role="status" aria-live="polite"></div>
                 <p class="disclaimer">RohGPT can make mistakes. Check important information.</p>
             </section>
         </main>
     </div>
+
+    <dialog class="memory-dialog" id="memoryDialog">
+        <form method="post" id="memoryForm">
+            {% csrf_token %}
+            <h2>Conversation memory</h2>
+            <p>Add preferences for this chat. These notes are stored locally with the conversation.</p>
+            <textarea name="memory" id="memoryText" maxlength="2000"
+                placeholder="For example: I prefer concise explanations.">{{ memory }}</textarea>
+            <div class="dialog-actions">
+                <button type="button" class="dialog-cancel" id="closeMemory">Cancel</button>
+                <button type="submit" class="dialog-save">Save memory</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog class="memory-dialog" id="renameDialog">
+        <form method="post" id="renameForm">
+            {% csrf_token %}
+            <h2>Rename chat</h2>
+            <p>Choose a title for this conversation.</p>
+            <input type="text" name="title" id="renameText" maxlength="200" required
+                value="{{ conversation.title }}" aria-label="Chat title">
+            <div class="dialog-actions">
+                <button type="button" class="dialog-cancel" id="closeRename">Cancel</button>
+                <button type="submit" class="dialog-save">Save title</button>
+            </div>
+        </form>
+    </dialog>
 
     <script>
         (function () {
@@ -203,6 +288,14 @@
             var backdrop = document.getElementById("sidebarBackdrop");
             var search = document.getElementById("chatSearch");
             var upload = document.getElementById("pdfFile");
+            var imageFiles = document.getElementById("imageFiles");
+            var attachmentPreview = document.getElementById("attachmentPreview");
+            var streamStatus = document.getElementById("streamStatus");
+            var topbar = document.querySelector(".topbar");
+            var modelSelect = document.getElementById("modelSelect");
+            var memoryDialog = document.getElementById("memoryDialog");
+            var renameDialog = document.getElementById("renameDialog");
+            var activeRequest = null;
 
             thread.scrollTop = thread.scrollHeight;
 
@@ -216,15 +309,121 @@
             box.addEventListener("keydown", function (event) {
                 if (event.key === "Enter" && !event.shiftKey) {
                     event.preventDefault();
-                    if (box.value.trim()) form.requestSubmit();
+                    if (box.value.trim() || imageFiles.files.length) form.requestSubmit();
                 }
             });
 
-            form.addEventListener("submit", function () {
-                if (!box.value.trim()) return;
-                sendBtn.disabled = true;
-                sendBtn.innerHTML = '<span class="loading-spinner" aria-hidden="true"></span>';
-                sendBtn.setAttribute("aria-label", "Generating response");
+            function showMessage(role, content) {
+                var article = document.createElement("article");
+                article.className = "message " + role;
+                if (role === "assistant") {
+                    var mark = document.createElement("div");
+                    mark.className = "assistant-mark";
+                    mark.textContent = "R";
+                    article.appendChild(mark);
+                }
+                var body = document.createElement("div");
+                body.className = "message-body";
+                if (role === "assistant") {
+                    var author = document.createElement("div");
+                    author.className = "message-author";
+                    author.textContent = "RohGPT";
+                    body.appendChild(author);
+                }
+                var bubble = document.createElement("div");
+                bubble.className = "bubble markdown-content";
+                bubble.textContent = content;
+                body.appendChild(bubble);
+                article.appendChild(body);
+                thread.querySelector(".thread-inner").appendChild(article);
+                thread.scrollTop = thread.scrollHeight;
+                return bubble;
+            }
+
+            async function readStream(response, bubble) {
+                var reader = response.body.getReader();
+                var decoder = new TextDecoder();
+                var buffer = "";
+                while (true) {
+                    var result = await reader.read();
+                    if (result.done) break;
+                    buffer += decoder.decode(result.value, { stream: true });
+                    var events = buffer.split(/\r?\n\r?\n/);
+                    buffer = events.pop();
+                    events.forEach(function (rawEvent) {
+                        var eventName = "";
+                        var data = "";
+                        rawEvent.split(/\r?\n/).forEach(function (line) {
+                            if (line.indexOf("event:") === 0) eventName = line.slice(6).trim();
+                            if (line.indexOf("data:") === 0) data += line.slice(5).trim();
+                        });
+                        if (!data) return;
+                        var payload = JSON.parse(data);
+                        if (eventName === "token") {
+                            bubble.textContent += payload.text;
+                            thread.scrollTop = thread.scrollHeight;
+                        } else if (eventName === "error") {
+                                throw new Error(payload.message);
+                            } else if (eventName === "done") {
+                                streamStatus.dataset.completed = "true";
+                            }
+                        });
+                }
+                if (streamStatus.dataset.completed !== "true") {
+                        throw new Error("The response stream ended unexpectedly.");
+                }
+                delete streamStatus.dataset.completed;
+            }
+
+            form.addEventListener("submit", async function (event) {
+                event.preventDefault();
+                if (activeRequest) {
+                    activeRequest.abort();
+                    return;
+                }
+                if (!box.value.trim() && !imageFiles.files.length) return;
+                var userText = box.value.trim() || "Please describe the attached image.";
+                var body = new FormData(form);
+                if (modelSelect) body.append("model", modelSelect.value);
+                activeRequest = new AbortController();
+                showMessage("user", userText);
+                box.value = "";
+                resizeComposer();
+                sendBtn.innerHTML = '<span aria-hidden="true">■</span>';
+                sendBtn.setAttribute("aria-label", "Stop generating");
+                sendBtn.title = "Stop generating";
+                streamStatus.textContent = "Generating…";
+                try {
+                    var response = await fetch(form.dataset.streamUrl, {
+                        method: "POST",
+                        body: body,
+                        signal: activeRequest.signal,
+                        headers: { "Accept": "text/event-stream" }
+                    });
+                    if (!response.ok) {
+                        var error = await response.json();
+                        throw new Error(error.error || "Could not start the response.");
+                    }
+                    streamStatus.textContent = "";
+                    var assistantBubble = showMessage("assistant", "");
+                    await readStream(response, assistantBubble);
+                    window.location.reload();
+                } catch (error) {
+                    if (error.name === "AbortError") {
+                        streamStatus.textContent = "Generation stopped.";
+                        window.location.reload();
+                    } else {
+                        streamStatus.textContent = error.message || "The request failed.";
+                        streamStatus.classList.add("error");
+                        window.setTimeout(function () { window.location.reload(); }, 1500);
+                    }
+                } finally {
+                    activeRequest = null;
+                    sendBtn.disabled = false;
+                    sendBtn.innerHTML = '<span aria-hidden="true">↑</span>';
+                    sendBtn.setAttribute("aria-label", "Send message");
+                    sendBtn.title = "Send";
+                }
             });
 
             function closeSidebar() {
@@ -262,6 +461,148 @@
                 });
             }
 
+            document.getElementById("attachImage").addEventListener("click", function () {
+                imageFiles.click();
+            });
+
+            imageFiles.addEventListener("change", function () {
+                attachmentPreview.replaceChildren();
+                Array.from(imageFiles.files).forEach(function (file) {
+                    var label = document.createElement("span");
+                    label.className = "attachment-chip";
+                    label.textContent = file.name;
+                    attachmentPreview.appendChild(label);
+                });
+            });
+
+            var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            var voiceButton = document.getElementById("voiceInput");
+            if (SpeechRecognition) {
+                var recognition = new SpeechRecognition();
+                recognition.lang = navigator.language || "en-US";
+                recognition.interimResults = true;
+                recognition.addEventListener("result", function (event) {
+                    var transcript = "";
+                    for (var i = event.resultIndex; i < event.results.length; i++) {
+                        transcript += event.results[i][0].transcript;
+                    }
+                    box.value = (box.value ? box.value + " " : "") + transcript;
+                    resizeComposer();
+                });
+                recognition.addEventListener("start", function () {
+                    voiceButton.classList.add("active");
+                    voiceButton.setAttribute("aria-label", "Stop voice input");
+                });
+                recognition.addEventListener("end", function () {
+                    voiceButton.classList.remove("active");
+                    voiceButton.setAttribute("aria-label", "Start voice input");
+                });
+                recognition.addEventListener("error", function (event) {
+                    streamStatus.textContent = "Voice input error: " + event.error;
+                    streamStatus.classList.add("error");
+                });
+                voiceButton.addEventListener("click", function () {
+                    if (voiceButton.classList.contains("active")) {
+                        recognition.stop();
+                        return;
+                    }
+                    try {
+                        recognition.start();
+                        streamStatus.textContent = "Listening…";
+                        streamStatus.classList.remove("error");
+                    } catch (error) {
+                        streamStatus.textContent = "Voice input could not start: " + error.message;
+                        streamStatus.classList.add("error");
+                    }
+                });
+            } else {
+                voiceButton.disabled = true;
+                voiceButton.title = "Voice input is not supported by this browser.";
+            }
+
+            function speak(text) {
+                if (!window.speechSynthesis || !text.trim()) return;
+                window.speechSynthesis.cancel();
+                var utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = "en-US";
+                window.speechSynthesis.speak(utterance);
+            }
+
+            async function saveChatAction(data, successMessage) {
+                try {
+                    var response = await fetch(topbar.dataset.updateUrl, {
+                        method: "POST",
+                        body: data
+                    });
+                    var result = await response.json();
+                    if (!response.ok) {
+                        throw new Error(result.error || "Could not save this chat setting.");
+                    }
+                    streamStatus.textContent = successMessage;
+                    streamStatus.classList.remove("error");
+                    return result;
+                } catch (error) {
+                    streamStatus.textContent = error.message || "Could not reach the chat service.";
+                    streamStatus.classList.add("error");
+                    return null;
+                }
+            }
+
+            document.querySelectorAll(".speak-button").forEach(function (button) {
+                button.addEventListener("click", function () {
+                    speak(button.closest(".message-body").querySelector(".bubble").innerText);
+                });
+            });
+            document.getElementById("speakLatest").addEventListener("click", function () {
+                var replies = document.querySelectorAll(".message.assistant .bubble");
+                if (replies.length) speak(replies[replies.length - 1].innerText);
+            });
+
+            if (memoryDialog) {
+                document.getElementById("memoryButton").addEventListener("click", function () {
+                    memoryDialog.showModal();
+                });
+                document.getElementById("closeMemory").addEventListener("click", function () {
+                    memoryDialog.close();
+                });
+                document.getElementById("memoryForm").addEventListener("submit", async function (event) {
+                    event.preventDefault();
+                    var data = new FormData(event.currentTarget);
+                    data.set("action", "memory");
+                    var result = await saveChatAction(data, "Memory saved.");
+                    if (result) memoryDialog.close();
+                });
+            }
+
+            document.getElementById("renameChat").addEventListener("click", function () {
+                renameDialog.showModal();
+                document.getElementById("renameText").focus();
+                document.getElementById("renameText").select();
+            });
+            document.getElementById("closeRename").addEventListener("click", function () {
+                renameDialog.close();
+            });
+            document.getElementById("renameForm").addEventListener("submit", async function (event) {
+                event.preventDefault();
+                var data = new FormData(event.currentTarget);
+                data.set("action", "rename");
+                var result = await saveChatAction(data, "Chat renamed.");
+                if (result) window.location.reload();
+            });
+
+            if (modelSelect) {
+                modelSelect.addEventListener("change", function () {
+                    streamStatus.textContent = "Selected model: " + modelSelect.value;
+                    streamStatus.classList.remove("error");
+                });
+            }
+
+            if ("serviceWorker" in navigator) {
+                navigator.serviceWorker.register("/service-worker.js").catch(function () {
+                    streamStatus.textContent = "Offline app support could not be enabled.";
+                });
+            }
+
             function copyText(text) {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     return navigator.clipboard.writeText(text);
@@ -281,58 +622,30 @@
                 });
             }
 
-            document.querySelectorAll("[data-render-code]").forEach(function (bubble) {
-                var source = bubble.textContent;
-                bubble.dataset.rawText = source;
-                var fence = /```([\w+-]*)[ \t]*\n?([\s\S]*?)```/g;
-                var match;
-                var cursor = 0;
-                var fragment = document.createDocumentFragment();
-                while ((match = fence.exec(source)) !== null) {
-                    if (match.index > cursor) {
-                        fragment.appendChild(document.createTextNode(source.slice(cursor, match.index)));
-                    }
-                    var block = document.createElement("div");
-                    block.className = "code-block";
-                    var header = document.createElement("div");
-                    header.className = "code-header";
-                    var language = document.createElement("span");
-                    language.textContent = match[1] || "code";
-                    var copyCode = document.createElement("button");
-                    copyCode.type = "button";
-                    copyCode.className = "code-copy";
-                    copyCode.textContent = "Copy code";
-                    copyCode.addEventListener("click", function (event) {
-                        var button = event.currentTarget;
-                        var code = button.closest(".code-block").querySelector("code");
-                        copyText(code.textContent).then(function () {
-                            button.textContent = "Copied";
-                            window.setTimeout(function () { button.textContent = "Copy code"; }, 1500);
-                        }).catch(function () {
-                            button.textContent = "Copy failed";
-                            window.setTimeout(function () { button.textContent = "Copy code"; }, 2000);
-                        });
+            document.querySelectorAll(".codehilite").forEach(function (block) {
+                var header = document.createElement("div");
+                header.className = "code-header";
+                var language = document.createElement("span");
+                language.textContent = "Code";
+                var codeButton = document.createElement("button");
+                codeButton.type = "button";
+                codeButton.className = "code-copy";
+                codeButton.textContent = "Copy code";
+                codeButton.addEventListener("click", function () {
+                    copyText(block.querySelector("pre").innerText).then(function () {
+                        codeButton.textContent = "Copied";
+                        window.setTimeout(function () { codeButton.textContent = "Copy code"; }, 1500);
+                    }).catch(function () {
+                        codeButton.textContent = "Copy failed";
                     });
-                    var pre = document.createElement("pre");
-                    var code = document.createElement("code");
-                    code.textContent = match[2].replace(/\n$/, "");
-                    header.append(language, copyCode);
-                    pre.appendChild(code);
-                    block.append(header, pre);
-                    fragment.appendChild(block);
-                    cursor = fence.lastIndex;
-                }
-                if (!cursor) return;
-                if (cursor < source.length) {
-                    fragment.appendChild(document.createTextNode(source.slice(cursor)));
-                }
-                bubble.replaceChildren(fragment);
+                });
+                header.append(language, codeButton);
+                block.insertBefore(header, block.firstChild);
             });
 
             document.querySelectorAll(".copy-button").forEach(function (button) {
                 button.addEventListener("click", function () {
-                    var bubble = button.closest(".message-body").querySelector(".bubble");
-                    var content = bubble.dataset.rawText || bubble.innerText;
+                    var content = button.closest(".message-body").querySelector(".bubble").innerText;
                     var label = button.querySelector("span");
                     copyText(content).then(function () {
                         label.textContent = "Copied";
