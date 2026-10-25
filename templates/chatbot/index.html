@@ -1,0 +1,360 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#212121">
+    <title>{{ conversation.title }} · RohGPT</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+
+<body>
+    <div class="app">
+        <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+        <aside class="sidebar" id="sidebar" aria-label="Chat history">
+            <a class="brand" href="{% url 'chat_home' %}" aria-label="RohGPT home">
+                <span class="brand-mark" aria-hidden="true">R</span>
+                <span>RohGPT</span>
+            </a>
+
+            <div class="sidebar-actions">
+                <form method="post" action="{% url 'new_chat' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="new-chat">
+                        <span aria-hidden="true">＋</span> New chat
+                    </button>
+                </form>
+                <label class="search-box">
+                    <span aria-hidden="true">⌕</span>
+                    <input type="search" id="chatSearch" placeholder="Search chats" aria-label="Search chats">
+                    <kbd>Ctrl K</kbd>
+                </label>
+            </div>
+
+            <div class="history-label">Recent</div>
+            <nav class="chat-list" id="chatList" aria-label="Recent chats">
+                {% for chat in conversations %}
+                <div class="chat-item {% if chat.id == conversation.id %}active{% endif %}"
+                    data-chat-title="{{ chat.title|lower }}">
+                    <form method="post" action="{% url 'open_chat' chat.id %}" class="chat-open-form">
+                        {% csrf_token %}
+                        <button type="submit" class="chat-title" title="{{ chat.title }}">
+                            <span class="chat-icon" aria-hidden="true">◷</span>
+                            <span class="chat-title-text">{{ chat.title|truncatechars:38 }}</span>
+                        </button>
+                    </form>
+                    <form method="post" action="{% url 'delete_chat' chat.id %}" class="chat-delete"
+                        onsubmit="return confirm('Delete this chat?');">
+                        {% csrf_token %}
+                        <button type="submit" class="icon-button delete-button" aria-label="Delete chat"
+                            title="Delete chat">⋯</button>
+                    </form>
+                </div>
+                {% empty %}
+                <p class="empty-list">Your new chats will appear here.</p>
+                {% endfor %}
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="profile-avatar" aria-hidden="true">R</div>
+                <div class="profile-copy">
+                    <strong>RohGPT</strong>
+                    <span>Private AI assistant</span>
+                </div>
+                <span class="local-indicator" title="Local Ollama model"></span>
+            </div>
+        </aside>
+
+        <main class="main">
+            <header class="topbar">
+                <button type="button" class="icon-button menu-toggle" id="menuToggle"
+                    aria-label="Open chat history" aria-expanded="false">☰</button>
+                <div class="model-label">
+                    <span class="model-name">RohGPT</span>
+                    <span class="model-badge">LOCAL</span>
+                    <span class="model-subtitle">Ollama · Llama 3.2</span>
+                </div>
+                <div class="topbar-actions">
+                    <form method="post" action="{% url 'chat_home' %}"
+                        onsubmit="return confirm('Clear all messages in this chat?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="clear">
+                        <button type="submit" class="icon-button clear-button" title="Clear chat"
+                            aria-label="Clear chat">⌫</button>
+                    </form>
+                </div>
+            </header>
+
+            {% if messages %}
+            <div class="alerts" role="status" aria-live="polite">
+                {% for m in messages %}
+                <div class="alert {{ m.tags }}">{{ m }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if has_pdf %}
+            <section class="document-bar" aria-label="Attached PDF">
+                <span class="document-icon" aria-hidden="true">▤</span>
+                <span class="document-name">{{ pdf_name }}</span>
+                <span class="document-status">Attached to this chat</span>
+                <form method="post" action="{% url 'remove_pdf' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="icon-button" aria-label="Remove PDF" title="Remove PDF">×</button>
+                </form>
+            </section>
+            {% endif %}
+
+            <section class="thread" id="thread" aria-label="Chat messages">
+                <div class="thread-inner">
+                    {% for msg in chat_messages %}
+                    <article class="message {{ msg.role }}">
+                        {% if msg.role == "assistant" %}
+                        <div class="assistant-mark" aria-hidden="true">R</div>
+                        {% endif %}
+                        <div class="message-body">
+                            {% if msg.role == "assistant" %}
+                            <div class="message-author">RohGPT</div>
+                            {% endif %}
+                            <div class="bubble" data-render-code>{{ msg.content }}</div>
+                            {% if msg.role == "assistant" %}
+                            <div class="message-actions">
+                                <button type="button" class="message-action copy-button"
+                                    aria-label="Copy response" title="Copy">▢ <span>Copy</span></button>
+                                {% if forloop.last %}
+                                <form method="post" action="{% url 'chat_home' %}" class="regenerate-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="regenerate">
+                                    <button type="submit" class="message-action" title="Regenerate response">
+                                        ↻ <span>Regenerate</span>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </article>
+                    {% empty %}
+                    <div class="welcome" id="welcome">
+                        <div class="welcome-mark" aria-hidden="true">R</div>
+                        <h1>What can I help with?</h1>
+                        <p>Ask in any language. Replies are in English by default.</p>
+                        <div class="suggestions" aria-label="Suggested prompts">
+                            <button type="button" class="suggestion" data-prompt="Create a study schedule for me">
+                                <span class="suggestion-icon" aria-hidden="true">✳</span>
+                                <span><strong>Plan something</strong><small>Build a study schedule</small></span>
+                                <span class="suggestion-arrow" aria-hidden="true">↗</span>
+                            </button>
+                            <button type="button" class="suggestion" data-prompt="Explain this Python code in simple terms: ">
+                                <span class="suggestion-icon" aria-hidden="true">⌘</span>
+                                <span><strong>Understand code</strong><small>Explain a Python snippet</small></span>
+                                <span class="suggestion-arrow" aria-hidden="true">↗</span>
+                            </button>
+                            <button type="button" class="suggestion" data-prompt="Explain a new topic to me in simple terms">
+                                <span class="suggestion-icon" aria-hidden="true">◈</span>
+                                <span><strong>Learn something</strong><small>Get a simple explanation</small></span>
+                                <span class="suggestion-arrow" aria-hidden="true">↗</span>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="composer-area" aria-label="Message composer">
+                <div class="composer-tools">
+                    {% if not has_pdf %}
+                    <form method="post" action="{% url 'upload_pdf' %}" enctype="multipart/form-data"
+                        class="upload-form" id="uploadForm">
+                        {% csrf_token %}
+                        <label class="tool-button" for="pdfFile" title="Attach a PDF">
+                            <span aria-hidden="true">＋</span> <span>Attach PDF</span>
+                        </label>
+                        <input type="file" name="pdf_file" id="pdfFile" accept="application/pdf,.pdf"
+                            aria-label="Choose a PDF file" hidden>
+                    </form>
+                    {% endif %}
+                    <span class="composer-context">Your chats and files stay on this device</span>
+                </div>
+                <form method="post" action="{% url 'chat_home' %}" id="chatForm" class="composer">
+                    {% csrf_token %}
+                    <textarea name="message" id="message" rows="1" required
+                        placeholder="Ask anything" aria-label="Write your message" autofocus></textarea>
+                    <button type="submit" class="send-button" id="sendBtn" aria-label="Send message" title="Send">
+                        <span aria-hidden="true">↑</span>
+                    </button>
+                </form>
+                <p class="disclaimer">RohGPT can make mistakes. Check important information.</p>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        (function () {
+            "use strict";
+            var thread = document.getElementById("thread");
+            var form = document.getElementById("chatForm");
+            var box = document.getElementById("message");
+            var sendBtn = document.getElementById("sendBtn");
+            var sidebar = document.getElementById("sidebar");
+            var menuToggle = document.getElementById("menuToggle");
+            var backdrop = document.getElementById("sidebarBackdrop");
+            var search = document.getElementById("chatSearch");
+            var upload = document.getElementById("pdfFile");
+
+            thread.scrollTop = thread.scrollHeight;
+
+            function resizeComposer() {
+                box.style.height = "auto";
+                box.style.height = Math.min(box.scrollHeight, 180) + "px";
+            }
+            box.addEventListener("input", resizeComposer);
+            resizeComposer();
+
+            box.addEventListener("keydown", function (event) {
+                if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    if (box.value.trim()) form.requestSubmit();
+                }
+            });
+
+            form.addEventListener("submit", function () {
+                if (!box.value.trim()) return;
+                sendBtn.disabled = true;
+                sendBtn.innerHTML = '<span class="loading-spinner" aria-hidden="true"></span>';
+                sendBtn.setAttribute("aria-label", "Generating response");
+            });
+
+            function closeSidebar() {
+                sidebar.classList.remove("open");
+                backdrop.classList.remove("visible");
+                menuToggle.setAttribute("aria-expanded", "false");
+            }
+            menuToggle.addEventListener("click", function () {
+                var isOpen = sidebar.classList.toggle("open");
+                backdrop.classList.toggle("visible", isOpen);
+                menuToggle.setAttribute("aria-expanded", String(isOpen));
+            });
+            backdrop.addEventListener("click", closeSidebar);
+
+            if (search) {
+                search.addEventListener("input", function () {
+                    var query = search.value.trim().toLocaleLowerCase();
+                    document.querySelectorAll(".chat-item").forEach(function (item) {
+                        item.hidden = !item.getAttribute("data-chat-title").includes(query);
+                    });
+                });
+            }
+
+            document.querySelectorAll(".suggestion").forEach(function (button) {
+                button.addEventListener("click", function () {
+                    box.value = button.getAttribute("data-prompt");
+                    resizeComposer();
+                    box.focus();
+                });
+            });
+
+            if (upload) {
+                upload.addEventListener("change", function () {
+                    if (upload.files.length) upload.form.requestSubmit();
+                });
+            }
+
+            function copyText(text) {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    return navigator.clipboard.writeText(text);
+                }
+                return new Promise(function (resolve, reject) {
+                    var field = document.createElement("textarea");
+                    field.value = text;
+                    field.setAttribute("readonly", "");
+                    field.style.position = "fixed";
+                    field.style.opacity = "0";
+                    document.body.appendChild(field);
+                    field.select();
+                    var copied = document.execCommand("copy");
+                    field.remove();
+                    if (copied) resolve();
+                    else reject(new Error("Clipboard is unavailable"));
+                });
+            }
+
+            document.querySelectorAll("[data-render-code]").forEach(function (bubble) {
+                var source = bubble.textContent;
+                bubble.dataset.rawText = source;
+                var fence = /```([\w+-]*)[ \t]*\n?([\s\S]*?)```/g;
+                var match;
+                var cursor = 0;
+                var fragment = document.createDocumentFragment();
+                while ((match = fence.exec(source)) !== null) {
+                    if (match.index > cursor) {
+                        fragment.appendChild(document.createTextNode(source.slice(cursor, match.index)));
+                    }
+                    var block = document.createElement("div");
+                    block.className = "code-block";
+                    var header = document.createElement("div");
+                    header.className = "code-header";
+                    var language = document.createElement("span");
+                    language.textContent = match[1] || "code";
+                    var copyCode = document.createElement("button");
+                    copyCode.type = "button";
+                    copyCode.className = "code-copy";
+                    copyCode.textContent = "Copy code";
+                    copyCode.addEventListener("click", function (event) {
+                        var button = event.currentTarget;
+                        var code = button.closest(".code-block").querySelector("code");
+                        copyText(code.textContent).then(function () {
+                            button.textContent = "Copied";
+                            window.setTimeout(function () { button.textContent = "Copy code"; }, 1500);
+                        }).catch(function () {
+                            button.textContent = "Copy failed";
+                            window.setTimeout(function () { button.textContent = "Copy code"; }, 2000);
+                        });
+                    });
+                    var pre = document.createElement("pre");
+                    var code = document.createElement("code");
+                    code.textContent = match[2].replace(/\n$/, "");
+                    header.append(language, copyCode);
+                    pre.appendChild(code);
+                    block.append(header, pre);
+                    fragment.appendChild(block);
+                    cursor = fence.lastIndex;
+                }
+                if (!cursor) return;
+                if (cursor < source.length) {
+                    fragment.appendChild(document.createTextNode(source.slice(cursor)));
+                }
+                bubble.replaceChildren(fragment);
+            });
+
+            document.querySelectorAll(".copy-button").forEach(function (button) {
+                button.addEventListener("click", function () {
+                    var bubble = button.closest(".message-body").querySelector(".bubble");
+                    var content = bubble.dataset.rawText || bubble.innerText;
+                    var label = button.querySelector("span");
+                    copyText(content).then(function () {
+                        label.textContent = "Copied";
+                        window.setTimeout(function () {
+                            label.textContent = "Copy";
+                        }, 1500);
+                    }).catch(function () {
+                        label.textContent = "Copy failed";
+                        window.setTimeout(function () { label.textContent = "Copy"; }, 2000);
+                    });
+                });
+            });
+
+            document.addEventListener("keydown", function (event) {
+                if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k" && search) {
+                    event.preventDefault();
+                    search.focus();
+                }
+                if (event.key === "Escape") closeSidebar();
+            });
+        })();
+    </script>
+</body>
+
+</html>
